@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Unified AutoML + Dataset Diagnosis + Drift Detection for production ML"
 readme = "README.md"
 license = { file = "LICENSE" }
-authors = [{ name = "AutoGuard Contributors", email = "hello@autoguard-ml.dev" }]
+authors = [{ name = "Nikhil Parab", email = "YOUR_REAL_EMAIL" }]
 keywords = ["automl", "drift-detection", "mlops", "explainability", "data-quality", "machine-learning"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -44,22 +44,24 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-api    = ["fastapi>=0.104.0", "uvicorn[standard]>=0.24.0", "pydantic>=2.0.0"]
+api       = ["fastapi>=0.104.0", "uvicorn[standard]>=0.24.0", "pydantic>=2.0.0"]
 dashboard = ["streamlit>=1.28.0", "plotly>=5.18.0"]
-dev    = ["pytest>=7.4.0", "pytest-cov>=4.1.0", "black>=23.0.0", "ruff>=0.1.0"]
-all    = ["autoguard-ml[api,dashboard,dev]"]
+dev       = ["pytest>=7.4.0", "pytest-cov>=4.1.0", "black>=23.0.0", "ruff>=0.1.0"]
+all       = ["autoguard-ml[api,dashboard,dev]"]
 
 [project.scripts]
 autoguard = "autoguard.cli.main:cli"
 
 [project.urls]
-Homepage = "https://github.com/autoguard/autoguard-ml"
+Homepage      = "https://github.com/Nikhil-Parab/autoguard-ml"
+Repository    = "https://github.com/Nikhil-Parab/autoguard-ml"
+Issues        = "https://github.com/Nikhil-Parab/autoguard-ml/issues"
 Documentation = "https://autoguard-ml.readthedocs.io"
 
 [tool.setuptools.packages.find]
-where = ["."]
+where   = ["."]
 include = ["autoguard*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v"
+addopts   = "-v"
