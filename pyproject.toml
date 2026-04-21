@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Unified AutoML + Dataset Diagnosis + Drift Detection for production ML"
 readme = "README.md"
 license = { file = "LICENSE" }
-authors = [{ name = "Nikhil Parab", email = "YOUR_REAL_EMAIL" }]
+authors = [{ name = "Nikhil Parab", email = "nikhil@youremail.com" }]
 keywords = ["automl", "drift-detection", "mlops", "explainability", "data-quality", "machine-learning"]
 classifiers = [
     "Development Status :: 4 - Beta",
