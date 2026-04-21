@@ -1,0 +1,14 @@
+@"
+venv/
+__pycache__/
+*.pkl
+*.csv
+autoguard_output/
+*.egg-info/
+dist/
+build/
+.env
+*.log
+config_default.yaml
+model.html
+"@ | Set-Content .gitignore

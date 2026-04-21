@@ -1,0 +1,1 @@
+numpy pandas scikit-learn scipy matplotlib seaborn rich click pyyaml joblib jinja2 tabulate tqdm xgboost lightgbm optuna shap imbalanced-learn fastapi uvicorn

@@ -1,0 +1,57 @@
+# ═══════════════════════════════════════════
+# AutoGuard ML — Example Configuration File
+# ═══════════════════════════════════════════
+# Usage:
+#   ag = AutoGuard(target="label", config_path="config.yaml")
+# Or via CLI:
+#   autoguard train data.csv --target label --config config.yaml
+
+target: churn        # target column in your dataset
+verbose: true
+output_dir: autoguard_output
+
+# ─── Dataset Diagnosis ────────────────────────────────────────────────
+data:
+  missing_threshold: 0.30          # columns with >30% missing get flagged
+  correlation_threshold: 0.95      # feature pairs with |corr| > 0.95 are flagged
+  outlier_method: iqr              # iqr | zscore
+  outlier_threshold: 3.0
+  skewness_threshold: 1.0
+  imbalance_ratio_threshold: 0.10  # minority class below 10% triggers warning
+  leakage_correlation_threshold: 0.98
+  generate_plots: true
+  plot_output_dir: autoguard_output/plots
+
+# ─── AutoML Engine ────────────────────────────────────────────────────
+automl:
+  models:
+    - random_forest
+    - xgboost
+    - lightgbm
+    - logistic_regression
+    - ridge
+  n_trials: 50             # Optuna trials per model (more = better, slower)
+  cv_folds: 5
+  scoring_classification: f1_weighted
+  scoring_regression: neg_root_mean_squared_error
+  timeout_per_model: 120   # seconds
+  feature_engineering: true
+  handle_imbalance: true   # apply SMOTE if imbalanced
+  export_dir: autoguard_output/models
+  n_jobs: -1               # use all CPU cores
+  random_state: 42
+
+# ─── Explainability (SHAP) ────────────────────────────────────────────
+explain:
+  max_samples: 300
+  plot_top_n_features: 15
+  output_dir: autoguard_output/explain
+
+# ─── Drift Detection ──────────────────────────────────────────────────
+drift:
+  ks_pvalue_threshold: 0.05        # KS test significance level
+  psi_threshold_warning: 0.10     # PSI > 0.1 → moderate drift
+  psi_threshold_alert: 0.20       # PSI > 0.2 → severe drift, retrain
+  alert_email: null                # set to send email alerts (future)
+  log_dir: autoguard_output/drift_logs
+  report_dir: autoguard_output/drift_reports

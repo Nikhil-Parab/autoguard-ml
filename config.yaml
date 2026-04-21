@@ -1,0 +1,38 @@
+target: ''
+data:
+  missing_threshold: 0.3
+  correlation_threshold: 0.95
+  outlier_method: iqr
+  outlier_threshold: 3.0
+  skewness_threshold: 1.0
+  imbalance_ratio_threshold: 0.1
+  leakage_correlation_threshold: 0.98
+  generate_plots: true
+  plot_output_dir: autoguard_output/plots
+automl:
+  models:
+  - xgboost
+  - lightgbm
+  n_trials: 10
+  cv_folds: 5
+  scoring_classification: f1_weighted
+  scoring_regression: neg_root_mean_squared_error
+  timeout_per_model: 120
+  feature_engineering: true
+  handle_imbalance: true
+  export_dir: autoguard_output/models
+  n_jobs: 1
+  random_state: 42
+explain:
+  max_samples: 300
+  plot_top_n_features: 15
+  output_dir: autoguard_output/explain
+drift:
+  ks_pvalue_threshold: 0.05
+  psi_threshold_warning: 0.1
+  psi_threshold_alert: 0.2
+  alert_email: null
+  log_dir: autoguard_output/drift_logs
+  report_dir: autoguard_output/drift_reports
+verbose: true
+output_dir: autoguard_output
