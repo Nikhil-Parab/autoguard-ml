@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autoguard-ml"
-version = "0.1.1"
+version = "0.1.2"
 description = "Unified AutoML + Dataset Diagnosis + Drift Detection for production ML"
 readme = "README.md"
 license = { file = "LICENSE" }
-authors = [{ name = "Nikhil Parab", email = "nikhil@youremail.com" }]
+authors = [{ name = "Nikhil Parab", email = "nikhilparab1552@gmail.com" }]
 keywords = ["automl", "drift-detection", "mlops", "explainability", "data-quality", "machine-learning"]
 classifiers = [
     "Development Status :: 4 - Beta",
