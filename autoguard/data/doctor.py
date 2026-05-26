@@ -147,7 +147,8 @@ class DatasetDoctor:
         }
 
     def _check_correlations(self, features: pd.DataFrame) -> dict[str, Any]:
-        num = features.select_dtypes(include=[np.number])
+        # Exclude bool columns from correlation — corr() on bool gives nonsense
+        num = features.select_dtypes(include=[np.number]).select_dtypes(exclude=["bool"])
         if num.shape[1] < 2:
             return {"status": "skipped", "reason": "Need ≥2 numeric features"}
 
@@ -175,7 +176,8 @@ class DatasetDoctor:
         else:
             y_enc = y.astype(float)
 
-        num = features.select_dtypes(include=[np.number])
+        # Exclude bool columns from leakage check
+        num = features.select_dtypes(include=[np.number]).select_dtypes(exclude=["bool"])
         suspects: list[dict[str, Any]] = []
 
         for col in num.columns:
@@ -195,7 +197,10 @@ class DatasetDoctor:
         }
 
     def _check_outliers(self, features: pd.DataFrame) -> dict[str, Any]:
-        num = features.select_dtypes(include=[np.number])
+        # Exclude bool columns — IQR subtraction crashes on bool dtype
+        num = features.select_dtypes(include=[np.number]).select_dtypes(exclude=["bool"])
+        # Also cast any int8/int16 to float64 for safe arithmetic
+        num = num.astype({c: "float64" for c in num.columns if num[c].dtype.itemsize < 4})
         flagged: dict[str, Any] = {}
 
         for col in num.columns:
@@ -225,7 +230,8 @@ class DatasetDoctor:
         }
 
     def _check_skewness(self, features: pd.DataFrame) -> dict[str, Any]:
-        num = features.select_dtypes(include=[np.number])
+        # Exclude bool columns — skew on bool is meaningless
+        num = features.select_dtypes(include=[np.number]).select_dtypes(exclude=["bool"])
         skewed: dict[str, float] = {}
 
         for col in num.columns:
@@ -302,7 +308,7 @@ class DatasetDoctor:
         plt.close(fig)
 
     def _plot_correlation(self, features: pd.DataFrame) -> None:
-        num = features.select_dtypes(include=[np.number])
+        num = features.select_dtypes(include=[np.number]).select_dtypes(exclude=["bool"])
         if num.shape[1] < 2:
             return
         n = min(num.shape[1], 25)
@@ -331,7 +337,7 @@ class DatasetDoctor:
         plt.close(fig)
 
     def _plot_skewness(self, features: pd.DataFrame) -> None:
-        num = features.select_dtypes(include=[np.number])
+        num = features.select_dtypes(include=[np.number]).select_dtypes(exclude=["bool"])
         skew = num.skew().abs().sort_values(ascending=False).head(15)
         if skew.empty:
             return
