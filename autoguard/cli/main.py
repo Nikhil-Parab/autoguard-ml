@@ -18,10 +18,14 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import click
 from autoguard.core.logging import get_logger, configure_logging, _make_utf8_console
+
+if TYPE_CHECKING:
+    import pandas as pd
+    from autoguard import AutoGuard
 
 console = _make_utf8_console()
 
@@ -45,7 +49,7 @@ def cli() -> None:
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────
 
-def _load_csv(path: str) -> "pd.DataFrame":
+def _load_csv(path: str) -> pd.DataFrame:
     import pandas as pd
     p = Path(path)
     if not p.exists():
@@ -54,12 +58,12 @@ def _load_csv(path: str) -> "pd.DataFrame":
     return pd.read_csv(p)
 
 
-def _load_ag(model_path: str) -> "AutoGuard":
+def _load_ag(model_path: str) -> AutoGuard:
     from autoguard import AutoGuard
     return AutoGuard.load(model_path)
 
 
-def _make_ag(target: str, config: Optional[str]) -> "AutoGuard":
+def _make_ag(target: str, config: Optional[str]) -> AutoGuard:
     from autoguard import AutoGuard, AutoGuardConfig
     if config:
         cfg = AutoGuardConfig.from_yaml(config)
