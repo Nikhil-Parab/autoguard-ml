@@ -256,11 +256,18 @@ class GetBestEngine:
 
         # Models to evaluate
         all_models = ModelRegistry.available()
-        models_to_try = models if models else [m for m in self.config.models if m in all_models]
-        # Also include catboost if registered but not in default list
-        for m in all_models:
-            if m not in models_to_try:
-                models_to_try.append(m)
+        if models:
+            # Explicit list — use exactly what was requested (filter to registered only)
+            models_to_try = [m for m in models if m in all_models]
+            unknown = [m for m in models if m not in all_models]
+            if unknown:
+                logger.warning(f"Unknown models (skipped): {unknown}")
+        else:
+            # No explicit list — use config defaults, then append any extras (e.g. catboost)
+            models_to_try = [m for m in self.config.models if m in all_models]
+            for m in all_models:
+                if m not in models_to_try:
+                    models_to_try.append(m)
 
         console.print(
             f"[bold]Benchmarking {len(models_to_try)} models[/bold] | "

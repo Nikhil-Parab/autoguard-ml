@@ -468,7 +468,18 @@ def cmd_getbest(
         import sys
         sys.exit(1)
 
-    engine.print_recommendations(results, top_n=top)
+    try:
+        engine.print_recommendations(results, top_n=top)
+    except Exception as e:
+        # Rendering glitch (e.g. terminal encoding) — fall back to plain text
+        console.print(f"\n[bold]Top recommendations:[/bold]")
+        for r in results[:top]:
+            if not (r["combined_score"] != r["combined_score"]):  # not NaN
+                tag = "[1]" if r["rank"] == 1 else "[*]" if r["recommended"] else "   "
+                console.print(
+                    f"  {r['rank']:>2}. {tag} {r['model']:<25} "
+                    f"cv={r['cv_score']:.4f}  combined={r['combined_score']:.4f}"
+                )
 
     if output:
         out_path = Path(output)
