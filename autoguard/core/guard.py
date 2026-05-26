@@ -95,7 +95,7 @@ class AutoGuard:
         self._X_val: Optional[pd.DataFrame] = None
 
         logger.info(
-            "[bold green]AutoGuard[/bold green] v0.1.0 initialized. "
+            "[bold green]AutoGuard[/bold green] v0.2.0 initialized. "
             f"Output → [cyan]{self.config.output_dir}[/cyan]"
         )
 
@@ -137,6 +137,90 @@ class AutoGuard:
         doctor = DatasetDoctor(config=self.config.data)
         self.diagnosis_report = doctor.diagnose(df, target=target)
         return self.diagnosis_report
+
+    # ──────────────────────────────────────────────────────────────────
+    # STEP 1b — GET BEST (pre-training model recommender)
+    # ──────────────────────────────────────────────────────────────────
+
+    def get_best(
+        self,
+        df: pd.DataFrame,
+        target: str = "",
+        problem_type: Optional[str] = None,
+        sample_frac: Optional[float] = None,
+        n_trials: Optional[int] = None,
+        models: Optional[list] = None,
+        save_report: Optional[str] = None,
+    ) -> list:
+        """
+        Recommend the best model(s) for your dataset BEFORE full training.
+
+        Runs a fast benchmark on a sample of the data using all registered
+        models (with lightweight Optuna HPO), then combines benchmark scores
+        with dataset heuristics to surface the best algorithm choices.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Dataset including target column.
+        target : str, optional
+            Target column name. Overrides constructor value if provided.
+        problem_type : str, optional
+            ``"classification"`` or ``"regression"``. Auto-detected if None.
+        sample_frac : float, optional
+            Fraction of data to sample for benchmarking. Default: 0.15.
+        n_trials : int, optional
+            Optuna trials per model. Default: 5.
+        models : list[str], optional
+            Subset of model keys to evaluate. Defaults to all registered.
+        save_report : str, optional
+            If provided, saves the recommendation report as JSON to this path.
+
+        Returns
+        -------
+        list[dict]
+            Ranked list of result dicts (rank, model, cv_score, combined_score, …).
+
+        Examples
+        --------
+        >>> results = ag.get_best(df, target="label")
+        >>> print(results[0]["model"])  # best model name
+        """
+        import json
+        from pathlib import Path as _Path
+
+        target = target or self._target
+        if not target:
+            from autoguard.core.exceptions import DataError
+            raise DataError("No target column specified.")
+
+        from autoguard.automl.getbest import GetBestEngine
+        engine = GetBestEngine(config=self.config.automl)
+        results = engine.run(
+            df=df,
+            target=target,
+            problem_type=problem_type,
+            sample_frac=sample_frac,
+            n_trials=n_trials,
+            models=models,
+        )
+        engine.print_recommendations(results)
+
+        if save_report:
+            out = _Path(save_report)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            clean = []
+            for r in results:
+                cr = dict(r)
+                for k, v in cr.items():
+                    if isinstance(v, float) and v != v:
+                        cr[k] = None
+                clean.append(cr)
+            with open(out, "w") as f:
+                json.dump({"recommendations": clean}, f, indent=2)
+            logger.info(f"GetBest report saved → [cyan]{save_report}[/cyan]")
+
+        return results
 
     # ──────────────────────────────────────────────────────────────────
     # STEP 2 — AUTO-FIX

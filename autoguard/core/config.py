@@ -31,6 +31,8 @@ class AutoMLConfig:
     models: list[str] = field(default_factory=lambda: [
         "random_forest", "xgboost", "lightgbm",
         "logistic_regression", "ridge",
+        "gradient_boosting", "extra_trees",
+        "svm", "knn", "decision_tree", "lasso",
     ])
     n_trials: int = 30
     cv_folds: int = 5
@@ -42,6 +44,9 @@ class AutoMLConfig:
     export_dir: str = "autoguard_output/models"
     n_jobs: int = -1
     random_state: int = 42
+    # getbest settings
+    getbest_sample_frac: float = 0.15   # fraction of data used for fast benchmark
+    getbest_n_trials: int = 5           # Optuna trials per model during getbest
 
 
 @dataclass

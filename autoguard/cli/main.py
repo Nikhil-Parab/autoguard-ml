@@ -30,14 +30,12 @@ console = Console()
 # ─────────────────────────────────────────────────────────────────────
 
 @click.group()
-@click.version_option(version="0.1.0", prog_name="autoguard")
+@click.version_option(version="0.2.0", prog_name="autoguard")
 def cli() -> None:
     """
     \b
-    ╔══════════════════════════════════════════╗
-    ║  AutoGuard ML  v0.1.0                   ║
-    ║  AutoML + Diagnosis + Drift Detection   ║
-    ╚══════════════════════════════════════════╝
+    AutoGuard ML  v0.2.0
+    AutoML + Diagnosis + Drift Detection
 
     Run `autoguard COMMAND --help` for details on any command.
     """
@@ -367,6 +365,136 @@ def cmd_init(output: str) -> None:
     cfg.to_yaml(output)
     console.print(f"[bold green]✓ Config created:[/bold green] [cyan]{output}[/cyan]")
     console.print(f"  Edit it, then pass with:  autoguard train data.csv -t label -c {output}")
+
+
+# ─────────────────────────────────────────────────────────────────────
+# GETBEST
+# ─────────────────────────────────────────────────────────────────────
+
+@cli.command("getbest")
+@click.argument("data", type=click.Path(exists=True))
+@click.option("--target", "-t", required=True, help="Target column name")
+@click.option(
+    "--problem-type", default=None,
+    type=click.Choice(["classification", "regression"]),
+    help="Override auto-detected problem type",
+)
+@click.option(
+    "--output", "-o", default=None,
+    help="Save recommendations to this JSON path",
+)
+@click.option(
+    "--sample-frac", default=0.15, show_default=True,
+    type=click.FloatRange(0.01, 1.0),
+    help="Fraction of data used for benchmarking (0.01-1.0)",
+)
+@click.option(
+    "--n-trials", default=5, show_default=True,
+    type=click.IntRange(1, 100),
+    help="Optuna trials per model (higher = more accurate, slower)",
+)
+@click.option(
+    "--models", default=None,
+    help="Comma-separated list of models to evaluate (default: all registered)",
+)
+@click.option(
+    "--top", default=12, show_default=True,
+    type=click.IntRange(1, 50),
+    help="Number of models to show in the output table",
+)
+def cmd_getbest(
+    data: str,
+    target: str,
+    problem_type: Optional[str],
+    output: Optional[str],
+    sample_frac: float,
+    n_trials: int,
+    models: Optional[str],
+    top: int,
+) -> None:
+    """
+    Recommend the best model(s) for your dataset BEFORE training.
+
+    Runs a fast benchmark on a sample of DATA using all registered models
+    (with lightweight Optuna HPO), then combines benchmark scores with
+    dataset heuristics to surface the top algorithm choices.
+
+    No model is saved — this is purely advisory. Use `autoguard train`
+    once you know which model(s) to use.
+
+    \\b
+    Examples:
+      autoguard getbest data.csv --target label
+      autoguard getbest data.csv --target price --problem-type regression
+      autoguard getbest data.csv --target label --sample-frac 0.3 --n-trials 10
+      autoguard getbest data.csv --target label --output recs.json
+      autoguard getbest data.csv --target label --models random_forest,xgboost,lightgbm
+    """
+    import json
+    from autoguard.automl.getbest import GetBestEngine
+    from autoguard.core.config import AutoMLConfig
+
+    df = _load_csv(data)
+
+    console.print(
+        f"\n[bold cyan]AutoGuard GetBest[/bold cyan] — "
+        f"[bold]{data}[/bold]  "
+        f"({df.shape[0]:,} rows × {df.shape[1]} cols)"
+    )
+    console.rule("[bold]Model Recommendation[/bold]")
+
+    # Parse optional models list
+    model_list: Optional[list[str]] = None
+    if models:
+        model_list = [m.strip() for m in models.split(",") if m.strip()]
+
+    cfg = AutoMLConfig(
+        getbest_sample_frac=sample_frac,
+        getbest_n_trials=n_trials,
+    )
+    engine = GetBestEngine(config=cfg)
+
+    try:
+        results = engine.run(
+            df=df,
+            target=target,
+            problem_type=problem_type,
+            sample_frac=sample_frac,
+            n_trials=n_trials,
+            models=model_list,
+        )
+    except Exception as e:
+        console.print(f"[bold red]GetBest failed:[/bold red] {e}")
+        import sys
+        sys.exit(1)
+
+    engine.print_recommendations(results, top_n=top)
+
+    if output:
+        out_path = Path(output)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        # Make results JSON-serializable
+        clean = []
+        for r in results:
+            cr = dict(r)
+            for k, v in cr.items():
+                if isinstance(v, float) and (v != v):  # NaN check
+                    cr[k] = None
+            clean.append(cr)
+        with open(out_path, "w") as f:
+            json.dump(
+                {
+                    "dataset": data,
+                    "target": target,
+                    "problem_type": results[0]["metric"].replace("f1_weighted", "classification")
+                        if results else "unknown",
+                    "sample_frac": sample_frac,
+                    "n_trials": n_trials,
+                    "recommendations": clean,
+                },
+                f, indent=2,
+            )
+        console.print(f"[bold green]✓ Recommendations saved:[/bold green] [cyan]{output}[/cyan]")
 
 
 if __name__ == "__main__":
