@@ -637,21 +637,21 @@ class AutoGuard:
             )
 
     def _print_leaderboard(self) -> None:
-        from rich.console import Console
         from rich.table import Table
+        from autoguard.core.logging import _make_utf8_console
 
         if self.leaderboard is None:
             return
 
-        console = Console()
-        table = Table(title="🏆 AutoML Leaderboard", show_header=True, header_style="bold cyan")
+        console = _make_utf8_console()
+        table = Table(title="AutoML Leaderboard", show_header=True, header_style="bold cyan")
         table.add_column("Rank", style="dim", width=6)
         table.add_column("Model", style="bold")
         table.add_column("CV Score", justify="right")
         table.add_column("Metric")
 
         for i, row in self.leaderboard.iterrows():
-            marker = "⭐ " if row["model"] == self.best_model_name else "   "
+            marker = "[*] " if row["model"] == self.best_model_name else "    "
             table.add_row(
                 str(i),
                 marker + row["model"],
@@ -661,10 +661,10 @@ class AutoGuard:
         console.print(table)
 
     def _print_summary(self, data: dict[str, Any]) -> None:
-        from rich.console import Console
         from rich.panel import Panel
+        from autoguard.core.logging import _make_utf8_console
 
-        console = Console()
+        console = _make_utf8_console()
         lines = [
             f"[bold]Problem[/bold]    : {data['problem_type']}",
             f"[bold]Target[/bold]     : {data['target']}",

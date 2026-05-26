@@ -354,11 +354,11 @@ class DatasetDoctor:
                               "location": loc, "message": msg})
 
     def _print_report(self, report: dict[str, Any]) -> None:
-        from rich.console import Console
         from rich.panel import Panel
         from rich.table import Table
+        from autoguard.core.logging import _make_utf8_console
 
-        console = Console()
+        console = _make_utf8_console()
         score = report["risk_score"]
         level = report["risk_level"]
         color = {"low": "green", "medium": "yellow", "high": "red", "critical": "bold red"}.get(level, "white")

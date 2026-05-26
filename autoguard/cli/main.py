@@ -21,9 +21,9 @@ from pathlib import Path
 from typing import Optional
 
 import click
-from rich.console import Console
+from autoguard.core.logging import get_logger, configure_logging, _make_utf8_console
 
-console = Console()
+console = _make_utf8_console()
 
 # ─────────────────────────────────────────────────────────────────────
 # ROOT GROUP

@@ -126,11 +126,11 @@ class DriftDetector:
         return report
 
     def print_summary(self, report: dict[str, Any]) -> None:
-        from rich.console import Console
         from rich.panel import Panel
         from rich.table import Table
+        from autoguard.core.logging import _make_utf8_console
 
-        console = Console()
+        console = _make_utf8_console()
         level = report["drift_level"]
         sev = report["overall_drift_severity"]
         color = {"none": "green", "low": "cyan", "moderate": "yellow",

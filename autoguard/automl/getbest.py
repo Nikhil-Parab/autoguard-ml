@@ -39,30 +39,14 @@ from rich import box
 from autoguard.automl.registry import ModelRegistry
 import autoguard.automl.registry  # noqa: F401 — registers built-ins
 from autoguard.core.config import AutoMLConfig
-from autoguard.core.logging import get_logger
+from autoguard.core.logging import get_logger, _make_utf8_console
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 warnings.filterwarnings("ignore")
 logger = get_logger(__name__)
 
 
-def _make_console() -> Console:
-    """Create a Rich Console that works on Windows (avoids legacy cp1252 renderer)."""
-    import sys
-    import io
-    # Wrap stdout in a UTF-8 TextIOWrapper so Rich never hits the legacy
-    # Windows console renderer, which can't encode non-cp1252 characters.
-    try:
-        utf8_stdout = io.TextIOWrapper(
-            sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True
-        )
-        return Console(file=utf8_stdout, highlight=False)
-    except AttributeError:
-        # stdout has no .buffer (e.g. pytest capture) — fall back
-        return Console(highlight=False)
-
-
-console = _make_console()
+console = _make_utf8_console()
 
 
 # ─────────────────────────────────────────────────────────────────────
