@@ -195,6 +195,14 @@ class AutoMLEngine:
     def _preprocess(
         self, X: pd.DataFrame, y: pd.Series
     ) -> tuple[np.ndarray, np.ndarray]:
+        X = X.copy()
+
+        # Cast any bool columns (e.g. from one-hot) to int8 so that
+        # SimpleImputer and StandardScaler never encounter bool dtype.
+        bool_cols = X.select_dtypes(include=["bool"]).columns.tolist()
+        if bool_cols:
+            X[bool_cols] = X[bool_cols].astype("int8")
+
         num_cols = X.select_dtypes(include=[np.number]).columns.tolist()
         cat_cols = X.select_dtypes(exclude=[np.number]).columns.tolist()
 
@@ -234,6 +242,7 @@ class AutoMLEngine:
                     logger.debug(f"SMOTE skipped: {e}")
 
         return X_t, y_arr
+
 
     def _get_feature_names(self) -> list[str]:
         ct = self._preprocessor.named_steps["ct"]

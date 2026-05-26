@@ -70,7 +70,17 @@ class AutoCleaner:
             df = df.drop(columns=self._dropped_cols)
             feature_cols = [c for c in feature_cols if c not in self._dropped_cols]
 
-        num_cols = [c for c in feature_cols if pd.api.types.is_numeric_dtype(df[c])]
+        # Bool columns (from one-hot etc.) must NOT go through quantile/skew ops.
+        # Cast them to int8 first so all numeric ops work uniformly.
+        bool_cols = [c for c in feature_cols if df[c].dtype == bool]
+        for col in bool_cols:
+            df[col] = df[col].astype("int8")
+
+        # Numeric = truly numeric but NOT boolean
+        num_cols = [
+            c for c in feature_cols
+            if pd.api.types.is_numeric_dtype(df[c]) and df[c].dtype != bool
+        ]
         cat_cols = [c for c in feature_cols if not pd.api.types.is_numeric_dtype(df[c])]
 
         # 2. Fill missing values
@@ -109,8 +119,8 @@ class AutoCleaner:
                 self._cat_maps[col] = mapping
                 df[col] = df[col].map(mapping).fillna(-1).astype(int)
             elif n_unique <= 50:
-                # One-hot encode
-                dummies = pd.get_dummies(df[col], prefix=col, drop_first=True)
+                # One-hot encode — cast to int8 so downstream sees integers, not bools
+                dummies = pd.get_dummies(df[col], prefix=col, drop_first=True).astype("int8")
                 df = pd.concat([df.drop(columns=[col]), dummies], axis=1)
             else:
                 # High cardinality: frequency encode

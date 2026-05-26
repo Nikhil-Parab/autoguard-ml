@@ -472,8 +472,14 @@ class GetBestEngine:
         from sklearn.pipeline import Pipeline
         from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
 
-        X_raw = df.drop(columns=[target])
+        X_raw = df.drop(columns=[target]).copy()
         y_raw = df[target]
+
+        # Cast any bool columns (e.g. from one-hot) to int8 so that
+        # SimpleImputer and StandardScaler never encounter bool dtype.
+        bool_cols = X_raw.select_dtypes(include=["bool"]).columns.tolist()
+        if bool_cols:
+            X_raw[bool_cols] = X_raw[bool_cols].astype("int8")
 
         num_cols = X_raw.select_dtypes(include=[np.number]).columns.tolist()
         cat_cols = X_raw.select_dtypes(exclude=[np.number]).columns.tolist()
@@ -501,3 +507,4 @@ class GetBestEngine:
             y_arr = le.fit_transform(y_arr)
 
         return X_t, y_arr
+
