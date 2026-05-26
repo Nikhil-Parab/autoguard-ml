@@ -34,7 +34,7 @@ console = _make_utf8_console()
 # ─────────────────────────────────────────────────────────────────────
 
 @click.group()
-@click.version_option(version="0.2.0", prog_name="autoguard")
+@click.version_option(version="0.2.2", prog_name="autoguard")
 def cli() -> None:
     """
     \b
@@ -441,7 +441,7 @@ def cmd_getbest(
     df = _load_csv(data)
 
     console.print(
-        f"\n[bold cyan]AutoGuard GetBest[/bold cyan] — "
+        f"\n[bold green]AutoGuard[/bold green] v0.2.2 [bold cyan]GetBest[/bold cyan] — "
         f"[bold]{data}[/bold]  "
         f"({df.shape[0]:,} rows × {df.shape[1]} cols)"
     )

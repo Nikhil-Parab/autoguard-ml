@@ -95,7 +95,7 @@ class AutoGuard:
         self._X_val: Optional[pd.DataFrame] = None
 
         logger.info(
-            "[bold green]AutoGuard[/bold green] v0.2.0 initialized. "
+            "[bold green]AutoGuard[/bold green] v0.2.2 initialized. "
             f"Output → [cyan]{self.config.output_dir}[/cyan]"
         )
 
