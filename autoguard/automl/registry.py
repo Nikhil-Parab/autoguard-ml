@@ -14,10 +14,58 @@ Plugin-based model registry. Register any sklearn-compatible model::
 """
 from __future__ import annotations
 
+import subprocess
+import sys
 from typing import Any, Callable
 
 import optuna
 optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+# ── CUDA probe ────────────────────────────────────────────────────────
+# Runs ONCE at import time.  All model factories share this result.
+def _probe_cuda() -> bool:
+    """Return True if a CUDA-capable GPU is visible to the current environment."""
+    # 1. Try PyTorch (fastest, most reliable)
+    try:
+        import torch  # noqa: F401
+        return torch.cuda.is_available()
+    except Exception:
+        pass
+    # 2. Try running a tiny XGBoost GPU fit in a subprocess (no PyTorch needed)
+    try:
+        result = subprocess.run(
+            [
+                sys.executable, "-c",
+                (
+                    "from xgboost import XGBClassifier; "
+                    "XGBClassifier(device='cuda', n_estimators=2).fit("
+                    "[[1,2],[3,4],[5,6],[7,8]],[0,1,0,1])"
+                ),
+            ],
+            capture_output=True,
+            timeout=15,
+        )
+        return result.returncode == 0
+    except Exception:
+        pass
+    # 3. Try nvidia-smi as a last resort
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+            capture_output=True, timeout=5,
+        )
+        return result.returncode == 0 and bool(result.stdout.strip())
+    except Exception:
+        return False
+
+_HAS_CUDA: bool = _probe_cuda()
+
+# Optional CatBoost support – skip registering when the library is absent.
+try:
+    import catboost  # noqa: F401
+    _HAS_CATBOOST = True
+except Exception:
+    _HAS_CATBOOST = False
 
 ModelFactory = Callable[[optuna.Trial, str], Any]
 _REGISTRY: dict[str, ModelFactory] = {}
@@ -75,19 +123,10 @@ def _xgb(trial: optuna.Trial, problem_type: str) -> Any:
         reg_lambda=trial.suggest_float("xgb_l", 1e-8, 1.0, log=True),
         random_state=42, verbosity=0,
         eval_metric="logloss" if problem_type == "classification" else "rmse",
+        # Use the module-level CUDA probe (runs once, not per trial)
+        device="cuda" if _HAS_CUDA else "cpu",
+        tree_method="hist",
     )
-    # Try GPU first, fall back to CPU gracefully
-    try:
-        import subprocess, sys
-        result = subprocess.run(
-            [sys.executable, "-c",
-             "from xgboost import XGBClassifier; XGBClassifier(device='cuda').fit([[1,2],[3,4]],[0,1])"],
-            capture_output=True, timeout=5
-        )
-        p["device"] = "cuda" if result.returncode == 0 else "cpu"
-    except Exception:
-        p["device"] = "cpu"
-    p["tree_method"] = "hist"
     Cls = XGBClassifier if problem_type == "classification" else XGBRegressor
     return Cls(**p)
 
@@ -104,15 +143,8 @@ def _lgbm(trial: optuna.Trial, problem_type: str) -> Any:
         colsample_bytree=trial.suggest_float("lgbm_col", 0.5, 1.0),
         random_state=42, verbose=-1, n_jobs=-1,
     )
-    # Try GPU, fall back silently to CPU
-    try:
-        import lightgbm as lgb
-        test = LGBMClassifier(device="gpu", n_estimators=2, verbose=-1)
-        import numpy as np
-        test.fit(np.array([[1, 2], [3, 4]]), [0, 1])
-        p["device"] = "gpu"
-    except Exception:
-        p["device"] = "cpu"
+    # Use the module-level CUDA probe (runs once, not per trial)
+    p["device"] = "gpu" if _HAS_CUDA else "cpu"
     Cls = LGBMClassifier if problem_type == "classification" else LGBMRegressor
     return Cls(**p)
 
@@ -232,22 +264,19 @@ def _lasso(trial: optuna.Trial, problem_type: str) -> Any:
         return Lasso(alpha=alpha, max_iter=max_iter, random_state=42)
 
 
-@ModelRegistry.register("catboost")
-def _catboost(trial: optuna.Trial, problem_type: str) -> Any:
-    try:
+if _HAS_CATBOOST:
+    @ModelRegistry.register("catboost")
+    def _catboost(trial: optuna.Trial, problem_type: str) -> Any:
         from catboost import CatBoostClassifier, CatBoostRegressor
-    except ImportError:
-        raise ImportError(
-            "CatBoost is not installed. Run: pip install catboost"
+        p = dict(
+            iterations=trial.suggest_int("cb_iter", 50, 400),
+            learning_rate=trial.suggest_float("cb_lr", 1e-3, 0.3, log=True),
+            depth=trial.suggest_int("cb_depth", 3, 10),
+            l2_leaf_reg=trial.suggest_float("cb_l2", 1e-3, 10, log=True),
+            border_count=trial.suggest_int("cb_border", 32, 255),
+            verbose=0, random_seed=42,
+            # Use the module-level CUDA probe (runs once, not per trial)
+            task_type="GPU" if _HAS_CUDA else "CPU",
         )
-    p = dict(
-        iterations=trial.suggest_int("cb_iter", 50, 400),
-        learning_rate=trial.suggest_float("cb_lr", 1e-3, 0.3, log=True),
-        depth=trial.suggest_int("cb_depth", 3, 10),
-        l2_leaf_reg=trial.suggest_float("cb_l2", 1e-3, 10, log=True),
-        border_count=trial.suggest_int("cb_border", 32, 255),
-        verbose=0, random_seed=42,
-        task_type="CPU",  # safe default; set to "GPU" if available
-    )
-    Cls = CatBoostClassifier if problem_type == "classification" else CatBoostRegressor
-    return Cls(**p)
+        Cls = CatBoostClassifier if problem_type == "classification" else CatBoostRegressor
+        return Cls(**p)
