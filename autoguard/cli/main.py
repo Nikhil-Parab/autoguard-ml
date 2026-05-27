@@ -36,11 +36,11 @@ console = _make_utf8_console(stderr=False)
 # ─────────────────────────────────────────────────────────────────────
 
 @click.group()
-@click.version_option(version="0.2.2", prog_name="autoguard")
+@click.version_option(version="0.2.3", prog_name="autoguard")
 def cli() -> None:
     """
     \b
-    AutoGuard ML  v0.2.2
+    AutoGuard ML  v0.2.3
     AutoML + Diagnosis + Drift Detection
 
     Run `autoguard COMMAND --help` for details on any command.
