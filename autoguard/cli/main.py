@@ -27,7 +27,9 @@ if TYPE_CHECKING:
     import pandas as pd
     from autoguard import AutoGuard
 
-console = _make_utf8_console()
+# Use the shared UTF-8 console so there is only ONE TextIOWrapper over stdout.
+# Creating a second wrapper causes GC to close the buffer → "I/O on closed file".
+console = _make_utf8_console(stderr=False)
 
 # ─────────────────────────────────────────────────────────────────────
 # ROOT GROUP
@@ -38,7 +40,7 @@ console = _make_utf8_console()
 def cli() -> None:
     """
     \b
-    AutoGuard ML  v0.2.0
+    AutoGuard ML  v0.2.2
     AutoML + Diagnosis + Drift Detection
 
     Run `autoguard COMMAND --help` for details on any command.
